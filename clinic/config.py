@@ -23,7 +23,6 @@ EMBEDDINGS_FILE = Path(os.getenv("EMBEDDINGS_FILE", str(
 NAMES_FILE = Path(os.getenv("NAMES_FILE", str(
     EMBEDDINGS_DIR / "face_names.json")))
 DATABASE_FILE = Path(os.getenv("DATABASE_FILE", str(DATA_DIR / "clinic.db")))
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 FACE_MODEL = os.getenv("FACE_MODEL", "buffalo_l").strip()
 
 # Ensure necessary directories exist

@@ -223,7 +223,6 @@ async def health_check():
         "gpu_in_use": face_engine.gpu_in_use if face_engine else False,
         "onnx_provider": face_engine.provider if face_engine else "unknown",
         "camera_connected": camera_manager.is_connected() if camera_manager else False,
-        "database_backend": "postgresql" if db and db.database_url else "sqlite",
     }
 
 
@@ -318,7 +317,6 @@ async def get_system_status():
         "onnx_provider": face_engine.provider if face_engine else "unknown",
         "tracked_people": len(latest_tracked_items),
         "database": "ready" if db else "initializing",
-        "database_backend": "postgresql" if db and db.database_url else "sqlite",
     }
 
 

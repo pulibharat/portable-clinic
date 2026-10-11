@@ -195,27 +195,8 @@ embeddings and `clinic.db` remain there after the container is recreated.
 The Docker compose setup is for RTSP cameras. For a laptop webcam, run the
 application directly on Windows with `python run.py --webcam` instead.
 
-### Shared PostgreSQL database
-
-By default, the application uses local SQLite at `data/clinic.db`. To use a
-Render PostgreSQL database, set `DATABASE_URL` in the Render service
-environment. Do not commit the URL or put it in frontend code.
-
-```text
-DATABASE_URL=postgresql://user:password@host/database
-```
-
-The same setting can be used with Docker through the local `.env` file. When
-`DATABASE_URL` is present, the application creates and uses these PostgreSQL
-tables automatically:
-
-- `clinic_events`
-- `doctor_sessions`
-- `visitor_sessions`
-- `clinic_settings`
-- `camera_sources`
-
-The API remains the access boundary for other applications:
+The application stores its operational data locally in SQLite at
+`data/clinic.db`. The API remains the access boundary for other applications:
 
 ```text
 GET /api/clinic/status
@@ -226,10 +207,9 @@ GET /api/clinic/analytics?date=YYYY-MM-DD
 GET /api/export/csv?date=YYYY-MM-DD
 ```
 
-A phone application should call these HTTPS API endpoints, using server-side
-authentication when enabled. It should not connect directly to PostgreSQL or
-contain database credentials. The live dashboard stream is available through
-the existing `/ws/stream` WebSocket endpoint.
+A phone application should call these API endpoints through a secured service
+boundary rather than opening the local database directly. The live dashboard
+stream is available through the existing `/ws/stream` WebSocket endpoint.
 
 ---
 

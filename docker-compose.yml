@@ -8,7 +8,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-}
       - RTSP_URL=${RTSP_URL:?Set RTSP_URL in .env before starting the container}
       - DOCTOR_NAMES=${DOCTOR_NAMES:-bharat,doctor,puli}
       - DOCTOR_EXIT_GRACE_SEC=${DOCTOR_EXIT_GRACE_SEC:-12.0}
