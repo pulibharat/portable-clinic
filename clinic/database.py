@@ -1,0 +1,459 @@
+"""
+SQLite Database Layer for Portable Clinic.
+Persists events, doctor sessions, visitor sessions, and daily audit metrics.
+"""
+
+import sqlite3
+import threading
+from datetime import datetime, date
+from pathlib import Path
+from typing import Optional, Any
+from .config import DATABASE_FILE
+
+
+class ClinicDatabase:
+    """Thread-safe SQLite manager for the clinic monitoring system."""
+
+    def __init__(self, db_path: Path = DATABASE_FILE):
+        self.db_path = db_path
+        self._lock = threading.Lock()
+        self._init_db()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _init_db(self) -> None:
+        """Create tables and indexes if they do not exist."""
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+
+            # Events Log Table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS clinic_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    unix_time REAL NOT NULL,
+                    event_type TEXT NOT NULL,
+                    person_name TEXT NOT NULL,
+                    person_id TEXT,
+                    details TEXT,
+                    date TEXT NOT NULL
+                )
+            """)
+
+            # Doctor Attendance Sessions Table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS doctor_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    doctor_name TEXT NOT NULL,
+                    entry_time TEXT NOT NULL,
+                    entry_unix REAL NOT NULL,
+                    exit_time TEXT,
+                    exit_unix REAL,
+                    duration_sec REAL DEFAULT 0,
+                    date TEXT NOT NULL
+                )
+            """)
+
+            # Visitor Sessions Table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS visitor_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    person_id TEXT NOT NULL,
+                    person_name TEXT NOT NULL,
+                    entry_time TEXT NOT NULL,
+                    entry_unix REAL NOT NULL,
+                    exit_time TEXT,
+                    exit_unix REAL,
+                    duration_sec REAL DEFAULT 0,
+                    was_unattended INTEGER DEFAULT 0,
+                    date TEXT NOT NULL
+                )
+            """)
+
+            # Settings Table (e.g., designated doctor list override)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS clinic_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS camera_sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    camera_name TEXT NOT NULL,
+                    location TEXT NOT NULL,
+                    source_url TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1
+                )
+            """)
+
+            # Indexes for faster queries
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_events_date ON clinic_events(date)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_events_type ON clinic_events(event_type)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_doc_date ON doctor_sessions(date)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_vis_date ON visitor_sessions(date)")
+
+            conn.commit()
+            conn.close()
+
+    def recover_open_sessions(self, recovered_at: Optional[datetime] = None) -> None:
+        """Close sessions left open by a previous server process."""
+        now = recovered_at or datetime.now()
+        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+        unix_time = now.timestamp()
+
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE doctor_sessions
+                SET exit_time = ?, exit_unix = ?, duration_sec = MAX(0, ? - entry_unix)
+                WHERE exit_time IS NULL
+            """, (timestamp, unix_time, unix_time))
+            cur.execute("""
+                UPDATE visitor_sessions
+                SET exit_time = ?, exit_unix = ?, duration_sec = MAX(0, ? - entry_unix)
+                WHERE exit_time IS NULL
+            """, (timestamp, unix_time, unix_time))
+            conn.commit()
+            conn.close()
+
+    def compact_overlapping_sessions(self) -> None:
+        """Merge duplicate overlapping sessions left by recognition jitter."""
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            for table, identity_column in (
+                ("doctor_sessions", "doctor_name"),
+                ("visitor_sessions", "person_id"),
+            ):
+                cur.execute(f"""
+                    SELECT id, {identity_column}, entry_unix, exit_unix
+                    FROM {table}
+                    ORDER BY {identity_column}, entry_unix, id
+                """)
+                active: dict[str, dict] = {}
+                for row in cur.fetchall():
+                    identity = str(row[identity_column]).lower()
+                    master = active.get(identity)
+                    if master is None:
+                        active[identity] = dict(row)
+                        continue
+
+                    master_end = master["exit_unix"]
+                    overlaps = master_end is None or row["entry_unix"] <= master_end
+                    if not overlaps:
+                        active[identity] = dict(row)
+                        continue
+
+                    row_end = row["exit_unix"]
+                    if master_end is None or row_end is None:
+                        merged_exit = None
+                    else:
+                        merged_exit = max(master_end, row_end)
+                    duration = None if merged_exit is None else max(
+                        0, merged_exit - master["entry_unix"])
+                    cur.execute(f"""
+                        UPDATE {table}
+                        SET exit_unix = ?, exit_time = CASE WHEN ? IS NULL THEN NULL ELSE datetime(?, 'unixepoch', 'localtime') END,
+                            duration_sec = ?
+                        WHERE id = ?
+                    """, (merged_exit, merged_exit, merged_exit, duration, master["id"]))
+                    cur.execute(
+                        f"DELETE FROM {table} WHERE id = ?", (row["id"],))
+                    master["exit_unix"] = merged_exit
+            conn.commit()
+            conn.close()
+
+    def log_event(self, event_type: str, person_name: str, person_id: Optional[str] = None, details: str = "") -> int:
+        """Record an event into the audit timeline."""
+        now = datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S")
+        u_time = now.timestamp()
+        today = now.strftime("%Y-%m-%d")
+
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO clinic_events (timestamp, unix_time, event_type, person_name, person_id, details, date)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (ts, u_time, event_type, person_name, person_id, details, today))
+            event_id = cur.lastrowid
+            conn.commit()
+            conn.close()
+            return event_id
+
+    def start_doctor_session(self, doctor_name: str, start_time: Optional[datetime] = None) -> int:
+        """Start a new doctor attendance session."""
+        now = start_time or datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S")
+        u_time = now.timestamp()
+        today = now.strftime("%Y-%m-%d")
+
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO doctor_sessions (doctor_name, entry_time, entry_unix, date)
+                VALUES (?, ?, ?, ?)
+            """, (doctor_name, ts, u_time, today))
+            session_id = cur.lastrowid
+            conn.commit()
+            conn.close()
+            return session_id
+
+    def close_doctor_session(self, session_id: int, exit_time: Optional[datetime] = None, duration_sec: Optional[float] = None) -> None:
+        """Close an active doctor attendance session."""
+        now = exit_time or datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S")
+        u_time = now.timestamp()
+
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT entry_unix FROM doctor_sessions WHERE id = ?", (session_id,))
+            row = cur.fetchone()
+            if row:
+                duration = duration_sec if duration_sec is not None else max(
+                    0.0, u_time - row["entry_unix"])
+                cur.execute("""
+                    UPDATE doctor_sessions
+                    SET exit_time = ?, exit_unix = ?, duration_sec = ?
+                    WHERE id = ?
+                """, (ts, u_time, duration, session_id))
+                conn.commit()
+            conn.close()
+
+    def start_visitor_session(self, person_id: str, person_name: str, was_unattended: bool, start_time: Optional[datetime] = None) -> int:
+        """Start a new visitor tracking session."""
+        now = start_time or datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S")
+        u_time = now.timestamp()
+        today = now.strftime("%Y-%m-%d")
+
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO visitor_sessions (person_id, person_name, entry_time, entry_unix, was_unattended, date)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (person_id, person_name, ts, u_time, 1 if was_unattended else 0, today))
+            session_id = cur.lastrowid
+            conn.commit()
+            conn.close()
+            return session_id
+
+    def close_visitor_session(self, session_id: int, exit_time: Optional[datetime] = None) -> None:
+        """Close an active visitor session with calculated duration."""
+        now = exit_time or datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S")
+        u_time = now.timestamp()
+
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT entry_unix FROM visitor_sessions WHERE id = ?", (session_id,))
+            row = cur.fetchone()
+            if row:
+                duration = max(0.0, u_time - row["entry_unix"])
+                cur.execute("""
+                    UPDATE visitor_sessions
+                    SET exit_time = ?, exit_unix = ?, duration_sec = ?
+                    WHERE id = ?
+                """, (ts, u_time, duration, session_id))
+                conn.commit()
+            conn.close()
+
+    def get_recent_events(self, limit: int = 50, date_filter: Optional[str] = None) -> list[dict]:
+        """Fetch latest events in reverse chronological order."""
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            if date_filter:
+                cur.execute("""
+                    SELECT * FROM clinic_events
+                    WHERE date = ?
+                    ORDER BY id DESC LIMIT ?
+                """, (date_filter, limit))
+            else:
+                cur.execute("""
+                    SELECT * FROM clinic_events
+                    ORDER BY id DESC LIMIT ?
+                """, (limit,))
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+            return rows
+
+    def get_camera_sources(self) -> list[dict]:
+        with self._lock:
+            conn = self._get_connection()
+            rows = [dict(row) for row in conn.execute(
+                "SELECT * FROM camera_sources WHERE is_active = 1 ORDER BY id ASC"
+            ).fetchall()]
+            conn.close()
+            return rows
+
+    def add_camera_source(self, camera_name: str, location: str, source_url: str) -> int:
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO camera_sources (camera_name, location, source_url, created_at)
+                VALUES (?, ?, ?, ?)
+            """, (camera_name.strip(), location.strip(), source_url.strip(), datetime.now().isoformat(timespec="seconds")))
+            camera_id = cur.lastrowid
+            conn.commit()
+            conn.close()
+            return camera_id
+
+    def deactivate_camera_source(self, camera_id: int) -> None:
+        with self._lock:
+            conn = self._get_connection()
+            conn.execute("UPDATE camera_sources SET is_active = 0 WHERE id = ?", (camera_id,))
+            conn.commit()
+            conn.close()
+
+    def get_doctor_sessions_today(self, target_date: Optional[str] = None) -> list[dict]:
+        """Get all doctor attendance records for today (or target date)."""
+        day = target_date or datetime.now().strftime("%Y-%m-%d")
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT * FROM doctor_sessions
+                WHERE date = ?
+                ORDER BY id ASC
+            """, (day,))
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+            return rows
+
+    def get_visitor_sessions_today(self, target_date: Optional[str] = None) -> list[dict]:
+        """Get all visitor session records for today (or target date)."""
+        day = target_date or datetime.now().strftime("%Y-%m-%d")
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT * FROM visitor_sessions
+                WHERE date = ?
+                ORDER BY id ASC
+            """, (day,))
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+            return rows
+
+    def get_daily_summary(self, target_date: Optional[str] = None) -> dict:
+        """Compute aggregated clinic statistics for today (or target date)."""
+        day = target_date or datetime.now().strftime("%Y-%m-%d")
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+
+            # Total Doctor presence duration
+            cur.execute("""
+                SELECT SUM(duration_sec) as total_doc_sec, COUNT(*) as doc_sessions
+                FROM doctor_sessions
+                WHERE date = ? AND exit_unix IS NOT NULL
+            """, (day,))
+            doc_row = cur.fetchone()
+            total_doc_sec = doc_row["total_doc_sec"] or 0.0
+            doc_session_count = doc_row["doc_sessions"] or 0
+
+            # Visitor stats
+            cur.execute("""
+                SELECT
+                    COUNT(*) as total_visitors,
+                    SUM(CASE WHEN was_unattended = 1 THEN 1 ELSE 0 END) as unattended_visitors,
+                    AVG(duration_sec) as avg_visitor_sec
+                FROM visitor_sessions
+                WHERE date = ?
+            """, (day,))
+            vis_row = cur.fetchone()
+            total_visitors = vis_row["total_visitors"] or 0
+            unattended_visitors = vis_row["unattended_visitors"] or 0
+            avg_vis_sec = vis_row["avg_visitor_sec"] or 0.0
+
+            conn.close()
+
+            return {
+                "date": day,
+                "total_doctor_presence_sec": total_doc_sec,
+                "total_doctor_presence_formatted": self.format_seconds(total_doc_sec),
+                "doctor_sessions_count": doc_session_count,
+                "total_visitors": total_visitors,
+                "unattended_visitors_count": unattended_visitors,
+                "avg_visitor_duration_sec": avg_vis_sec,
+            }
+
+    def get_analytics(self, target_date: Optional[str] = None) -> dict:
+        """Return chart-ready hourly visitor and occupancy activity for a day."""
+        day = target_date or datetime.now().strftime("%Y-%m-%d")
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT substr(entry_time, 12, 2) AS hour, COUNT(*) AS arrivals
+                FROM visitor_sessions
+                WHERE date = ?
+                GROUP BY hour ORDER BY hour
+            """, (day,))
+            arrivals = [dict(row) for row in cur.fetchall()]
+            cur.execute("""
+                SELECT substr(timestamp, 12, 2) AS hour, COUNT(*) AS events
+                FROM clinic_events
+                WHERE date = ?
+                GROUP BY hour ORDER BY hour
+            """, (day,))
+            events = [dict(row) for row in cur.fetchall()]
+            conn.close()
+        return {"date": day, "arrivals_by_hour": arrivals, "events_by_hour": events}
+
+    @staticmethod
+    def format_seconds(seconds: float) -> str:
+        """Format seconds into 'Xh Ym Zs' string."""
+        s = int(seconds)
+        hours = s // 3600
+        mins = (s % 3600) // 60
+        secs = s % 60
+        if hours > 0:
+            return f"{hours}h {mins}m {secs}s"
+        if mins > 0:
+            return f"{mins}m {secs}s"
+        return f"{secs}s"
+
+    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        """Fetch setting from DB."""
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT value FROM clinic_settings WHERE key = ?", (key,))
+            row = cur.fetchone()
+            conn.close()
+            return row["value"] if row else default
+
+    def set_setting(self, key: str, value: str) -> None:
+        """Save setting into DB."""
+        with self._lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO clinic_settings (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """, (key, value))
+            conn.commit()
+            conn.close()

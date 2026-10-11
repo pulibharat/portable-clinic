@@ -1,0 +1,37 @@
+services:
+  portable-clinic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: portable-clinic:latest
+    container_name: portable-clinic-app
+    ports:
+      - "8000:8000"
+    environment:
+      - RTSP_URL=${RTSP_URL:?Set RTSP_URL in .env before starting the container}
+      - DOCTOR_NAMES=${DOCTOR_NAMES:-bharat,doctor,puli}
+      - DOCTOR_EXIT_GRACE_SEC=${DOCTOR_EXIT_GRACE_SEC:-12.0}
+      - VISITOR_EXIT_GRACE_SEC=${VISITOR_EXIT_GRACE_SEC:-8.0}
+      - SIMILARITY_THRESHOLD=${SIMILARITY_THRESHOLD:-0.38}
+      - MATCH_MARGIN=${MATCH_MARGIN:-0.05}
+      - DET_THRESH=${DET_THRESH:-0.35}
+      - DET_WIDTH=${DET_WIDTH:-640}
+      - DET_HEIGHT=${DET_HEIGHT:-640}
+    volumes:
+      - ./data:/app/data
+      - insightface-models:/root/.insightface
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    command: ["python", "run.py", "--rtsp", "--host", "0.0.0.0", "--port", "8000"]
+
+volumes:
+  insightface-models:
+    driver: local

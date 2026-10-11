@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portable Clinic — AI Vision Monitoring & Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #f4f7fb;
+            --bg-card: #ffffff;
+            --bg-card-glass: #ffffff;
+            --bg-input: #f8fafc;
+            --border-subtle: #e5eaf1;
+            --border-focus: #2563eb;
+            --emerald: #188b68;
+            --emerald-glow: rgba(24, 139, 104, 0.12);
+            --cyan: #2678c7;
+            --cyan-glow: rgba(38, 120, 199, 0.12);
+            --rose: #c84d4d;
+            --rose-glow: rgba(200, 77, 77, 0.12);
+            --amber: #b37a17;
+            --amber-glow: rgba(179, 122, 23, 0.12);
+            --blue: #2563eb;
+            --text-primary: #182230;
+            --text-secondary: #647083;
+            --text-tertiary: #8b96a5;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --shadow-elevation: 0 8px 24px -16px rgba(25, 47, 75, 0.32), 0 0 1px 1px var(--border-subtle);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 0 34px 34px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card-glass);
+            border: 1px solid var(--border-subtle);
+            padding: 16px 34px;
+            border-radius: 0;
+            margin: 0 -34px 18px;
+            box-shadow: 0 1px 0 var(--border-subtle);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-logo {
+            width: 46px;
+            height: 46px;
+            background: #2e5ed8;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: none;
+        }
+
+        .brand-text h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .brand-text p {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .header-status-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hud-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: #f5f8fc;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .hud-badge.online {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.35);
+            color: var(--emerald);
+        }
+
+        .hud-badge.offline {
+            background: rgba(244, 63, 94, 0.12);
+            border-color: rgba(244, 63, 94, 0.35);
+            color: var(--rose);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .clock-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: #f5f8fc;
+            padding: 7px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Top 4 KPI Metrics */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 18px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card-glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 22px;
+            box-shadow: var(--shadow-elevation);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.25s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.15);
+        }
+
+        #cardDocShift { border: 2px solid #a9d9ca; background: linear-gradient(145deg, #ffffff, #f2fbf7); box-shadow: 0 12px 30px rgba(24, 139, 104, .13); }
+        #cardDocShift.shift-active { border-color: #38a983; box-shadow: 0 14px 34px rgba(24, 139, 104, .2); }
+        #cardDocShift.shift-active .kpi-title { color: var(--emerald); }
+        .shift-live-indicator { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; color: var(--text-tertiary); background: #eef2f5; font-size: .64rem; font-weight: 800; letter-spacing: .08em; }
+        .shift-live-indicator::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #9aa5b1; }
+        #cardDocShift.shift-active .shift-live-indicator { color: var(--emerald); background: #e5f7ef; }
+        #cardDocShift.shift-active .shift-live-indicator::before { background: var(--emerald); box-shadow: 0 0 0 4px rgba(24, 139, 104, .12); animation: shift-pulse 1.8s infinite; }
+        .shift-duration-value { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; color: var(--emerald); }
+        @keyframes shift-pulse { 50% { opacity: .45; transform: scale(.8); } }
+
+        .kpi-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .kpi-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .kpi-icon {
+            font-size: 1.35rem;
+        }
+
+        .kpi-main-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .kpi-val {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .kpi-pill-tag {
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 8px;
+            letter-spacing: 0.04em;
+        }
+
+        .tag-present {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .tag-absent {
+            background: rgba(244, 63, 94, 0.18);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.4);
+        }
+
+        .kpi-meta-footer {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 12px;
+            margin-top: 6px;
+        }
+
+        .kpi-meta-footer strong {
+            color: var(--text-primary);
+        }
+
+        /* Main Workspace Grid */
+        .workspace-layout {
+            display: grid;
+            grid-template-columns: 1fr 390px;
+            gap: 22px;
+            min-height: 560px;
+        }
+
+        .viewport-card {
+            background: var(--bg-card-glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-elevation);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport-topbar {
+            padding: 14px 22px;
+            background: #fbfcfe;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .source-selector-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .select-input, .text-input {
+            padding: 7px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .select-input:focus, .text-input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 7px 15px;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            color: white;
+        }
+
+        .btn-accent {
+            background: #2e5ed8;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+        }
+
+        .btn-accent:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-subtle {
+            background: #f6f8fb;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .btn-subtle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .camera-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; }
+        .camera-source-summary { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .camera-source-summary strong { display: block; font-size: .82rem; }
+        .camera-source-summary span { display: block; overflow: hidden; color: var(--text-tertiary); font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+        .camera-status-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--text-tertiary); }
+        .camera-status-dot.connected { background: var(--emerald); box-shadow: 0 0 0 4px var(--emerald-glow); }
+        .camera-modal { position: fixed; inset: 0; z-index: 115; display: none; place-items: center; padding: 24px; background: rgba(20, 29, 42, .48); }
+        .camera-modal.open { display: grid; }
+        .camera-modal-card { width: min(720px, 94vw); max-height: 90vh; overflow: auto; padding: 26px; border-radius: 18px; background: #fff; box-shadow: 0 28px 80px rgba(20, 40, 60, .25); }
+        .camera-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+        .camera-modal-head h3 { font-size: 1.2rem; }
+        .camera-modal-head p { margin-top: 5px; color: var(--text-secondary); font-size: .78rem; }
+        .camera-close { width: 32px; height: 32px; border: 0; border-radius: 50%; background: #f0f4f8; color: var(--text-primary); font-size: 1.2rem; cursor: pointer; }
+        .camera-list { display: grid; gap: 8px; margin-bottom: 22px; }
+        .camera-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--border-subtle); border-radius: 10px; }
+        .camera-row strong { display: block; font-size: .82rem; }
+        .camera-row span { display: block; margin-top: 3px; color: var(--text-tertiary); font-size: .7rem; }
+        .camera-row-actions { display: flex; gap: 7px; }
+        .camera-form { padding-top: 20px; border-top: 1px solid var(--border-subtle); }
+        .camera-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .camera-form-grid .wide { grid-column: 1 / -1; }
+        .camera-form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+        .video-stage {
+            position: relative;
+            width: 100%;
+            background: #e8edf4;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        .stage-hud-overlay {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .hud-glass-chip {
+            background: rgba(24, 34, 48, 0.86);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .viewport-footer {
+            padding: 12px 22px;
+            background: #fbfcfe;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .legend-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .legend-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .legend-color-box {
+            width: 9px;
+            height: 9px;
+            border-radius: 3px;
+        }
+
+        /* Timeline Activity Panel */
+        .timeline-card {
+            background: var(--bg-card-glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-elevation);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .timeline-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fbfcfe;
+        }
+
+        .timeline-scroll-area {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--blue);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .event-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(2px);
+        }
+
+        .event-card.event-doc-in {
+            border-left-color: var(--emerald);
+            background: rgba(16, 185, 129, 0.03);
+        }
+
+        .event-card.event-doc-out {
+            border-left-color: var(--rose);
+            background: rgba(244, 63, 94, 0.03);
+        }
+
+        .event-card.event-unattended {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.06);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.08);
+        }
+
+        .event-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .event-badge {
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-doc {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+        }
+
+        .badge-vis {
+            background: rgba(6, 182, 212, 0.18);
+            color: #22d3ee;
+        }
+
+        .badge-alert {
+            background: rgba(244, 63, 94, 0.18);
+            color: #fb7185;
+        }
+
+        .event-timestamp {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+        }
+
+        .event-details-text {
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            line-height: 1.35;
+        }
+
+        /* Bottom Section: Tables & Configuration */
+        .bottom-card {
+            background: var(--bg-card-glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-elevation);
+            padding: 24px;
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 14px;
+            margin-bottom: 22px;
+            overflow-x: auto;
+        }
+
+        .tab-link {
+            background: none;
+            border: none;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-link.active {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+
+        .tab-link:hover:not(.active) {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-content-panel {
+            display: none;
+        }
+
+        .tab-content-panel.active {
+            display: block;
+        }
+
+        /* Clean Tables */
+        .clinic-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .clinic-table th {
+            background: #f6f8fb;
+            color: var(--text-secondary);
+            padding: 14px 18px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .clinic-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+        }
+
+        .clinic-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Settings Grid */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .settings-box {
+            background: #fbfcfe;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .settings-box h3 {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-row label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .slider-input {
+            flex: 1;
+            accent-color: #38bdf8;
+        }
+
+        .slider-value-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--cyan);
+            min-width: 45px;
+        }
+
+        .alert-toast {
+            padding: 12px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            margin-bottom: 18px;
+            display: none;
+        }
+
+        .alert-toast.show {
+            display: block;
+        }
+
+        .alert-toast.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--emerald);
+            color: #34d399;
+        }
+
+        .alert-toast.error {
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid var(--rose);
+            color: #fb7185;
+        }
+
+        .clinic-picker {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: grid;
+            place-items: center;
+            padding: 74px 42px 42px;
+            background: #edf3f7;
+            background-image: linear-gradient(135deg, rgba(255,255,255,.78), rgba(224,240,243,.64));
+        }
+
+        .clinic-picker::before { content: 'VISHNU PORTABLE CLINIC'; position: absolute; top: 25px; left: 50%; transform: translateX(-50%); color: #164b76; font-size: clamp(1rem, 2vw, 1.45rem); font-weight: 900; letter-spacing: .18em; }
+        .clinic-picker::after { content: ''; position: absolute; right: 5%; bottom: 8%; width: 180px; height: 180px; border: 1px solid rgba(47, 185, 181, .2); border-radius: 50%; box-shadow: -34px 24px 0 -18px rgba(47,185,181,.1), -66px 48px 0 -36px rgba(47,185,181,.08); pointer-events: none; }
+
+        .clinic-picker.hidden { display: none; }
+
+        .clinic-picker-card {
+            width: min(1340px, 100%);
+            min-height: min(740px, calc(100vh - 116px));
+            display: grid;
+            grid-template-columns: .82fr 1.18fr;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid rgba(255,255,255,.9);
+            border-radius: 26px;
+            box-shadow: 0 28px 80px rgba(35, 65, 90, .18);
+        }
+
+        .picker-visual { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 100%; padding: 34px; color: #fff; overflow: hidden; background: linear-gradient(160deg, #073b5a, #087d86); }
+        .picker-visual::before { content: ''; position: absolute; width: 320px; height: 320px; right: -140px; top: 22%; border: 1px solid rgba(126, 239, 229, .25); border-radius: 50%; box-shadow: 0 0 0 28px rgba(126,239,229,.04), 0 0 0 56px rgba(126,239,229,.04); }
+        .picker-visual::after { content: ''; position: absolute; width: 180px; height: 180px; left: -78px; bottom: 12%; border: 1px solid rgba(255,255,255,.18); border-radius: 28px; transform: rotate(24deg); pointer-events: none; }
+        .picker-visual > * { position: relative; z-index: 1; }
+        .visual-brand { display: flex; align-items: center; gap: 13px; font-size: 1.35rem; font-weight: 900; letter-spacing: -.04em; }
+        .visual-brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: #34c3bc; font-size: 1.55rem; }
+        .visual-copy { max-width: 310px; }
+        .visual-copy .eyebrow { color: #9be9e4; }
+        .visual-copy h2 { margin: 12px 0; color: #fff; font-size: clamp(2rem, 4vw, 3.6rem); line-height: .98; letter-spacing: -.06em; }
+        .visual-copy p { color: rgba(255,255,255,.78); font-size: .9rem; line-height: 1.6; }
+        .visual-footer { display: flex; gap: 10px; flex-wrap: wrap; }
+        .visual-stat { padding: 11px 13px; border: 1px solid rgba(255,255,255,.23); border-radius: 12px; background: rgba(255,255,255,.1); backdrop-filter: blur(12px); }
+        .visual-stat strong { display: block; font-size: 1.05rem; }
+        .visual-stat span { color: rgba(255,255,255,.7); font-size: .68rem; }
+        .picker-workspace { display: flex; flex-direction: column; justify-content: center; padding: 48px; }
+        .clinic-picker-heading { max-width: 560px; margin-bottom: 26px; }
+        .eyebrow { color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .clinic-picker-heading h2 { margin: 8px 0; font-size: clamp(1.7rem, 3vw, 2.5rem); letter-spacing: -.04em; }
+        .clinic-picker-heading p { color: var(--text-secondary); line-height: 1.6; }
+        .platform-mark { display: flex; align-items: center; gap: 10px; color: #174b83; font-size: 1.05rem; font-weight: 800; }
+        .platform-mark span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #2fb9b5; color: #fff; font-size: 1.1rem; }
+
+        .clinic-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .clinic-option { text-align: left; padding: 18px; border: 1px solid var(--border-subtle); border-radius: 12px; background: #fff; cursor: pointer; transition: .2s ease; }
+        .clinic-option:hover, .clinic-option.selected { border-color: #8aa7ec; box-shadow: 0 8px 18px rgba(37, 99, 235, .1); transform: translateY(-2px); }
+        .clinic-option strong { display: block; font-size: .98rem; margin-bottom: 7px; }
+        .clinic-option span { color: var(--text-secondary); font-size: .78rem; line-height: 1.45; }
+        .clinic-option small { display: block; color: var(--blue); font-weight: 700; margin-top: 16px; }
+
+        .doctor-directory { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border-subtle); }
+        .doctor-directory-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+        .doctor-directory-heading strong { font-size: .9rem; }
+        .doctor-directory-heading span { color: var(--text-tertiary); font-size: .72rem; }
+        .doctor-directory-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .doctor-directory-card { display: flex; align-items: center; gap: 9px; min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--border-subtle); border-radius: 10px; background: #fbfcfe; text-align: left; cursor: pointer; transition: .2s ease; }
+        .doctor-directory-card:hover { border-color: #7fa2ed; background: #fff; transform: translateY(-2px); box-shadow: 0 7px 14px rgba(37, 99, 235, .1); }
+        .doctor-directory-card img { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 8px; object-fit: cover; background: #dbe5f8; }
+        .doctor-directory-card strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; }
+        .doctor-directory-card span { display: block; margin-top: 3px; color: var(--text-tertiary); font-size: .66rem; }
+
+        .password-dialog { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-subtle); display: none; gap: 10px; align-items: end; }
+        .password-dialog.open { display: flex; }
+        .password-dialog .form-row { flex: 1; }
+        .password-error { color: var(--rose); font-size: .78rem; min-height: 18px; }
+
+        .clinic-context { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin: 2px 0 22px; }
+        .clinic-context h2 { font-size: 1.55rem; letter-spacing: -.03em; }
+        .clinic-context p { color: var(--text-secondary); margin-top: 5px; }
+        .context-actions { display: flex; align-items: center; gap: 10px; }
+        .doctor-profile { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; border: 1px solid var(--border-subtle); border-radius: 12px; background: #fff; }
+        .doctor-profile img, .doctor-avatar { width: 42px; height: 42px; border-radius: 9px; object-fit: cover; background: #dbe5f8; }
+        .doctor-profile { cursor: zoom-in; }
+
+        .photo-modal { position: fixed; inset: 0; z-index: 120; display: none; place-items: center; padding: 24px; background: rgba(20, 29, 42, .62); }
+        .photo-modal.open { display: grid; }
+        .photo-modal-content { position: relative; max-width: min(940px, 94vw); max-height: 92vh; padding: 16px; background: #fff; border-radius: 18px; box-shadow: 0 28px 90px rgba(0, 0, 0, .34); }
+        .photo-modal-content img { display: block; width: auto; max-width: 90vw; max-height: 86vh; border-radius: 10px; object-fit: contain; image-rendering: auto; }
+        .photo-modal-close { position: absolute; top: -14px; right: -14px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: #fff; color: var(--text-primary); font-size: 1.3rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); }
+        .doctor-detail-modal { z-index: 125; }
+        .doctor-detail-content { width: min(680px, 94vw); padding: 28px; }
+        .doctor-detail-head { display: flex; align-items: center; gap: 18px; padding-bottom: 22px; border-bottom: 1px solid var(--border-subtle); }
+        .doctor-detail-head img { width: 170px; height: 210px; border-radius: 16px; object-fit: cover; image-rendering: auto; }
+        .doctor-detail-head h3 { font-size: 1.5rem; }
+        .doctor-detail-head p { margin-top: 4px; color: var(--text-secondary); font-size: .76rem; }
+        .doctor-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+        .doctor-detail-item { padding: 11px; border-radius: 10px; background: #f5f8fb; }
+        .doctor-detail-item span { display: block; color: var(--text-tertiary); font-size: .68rem; }
+        .doctor-detail-item strong { display: block; margin-top: 5px; font-size: .82rem; }
+        .occupancy-counts { display: flex; gap: 12px; }
+        .occupancy-count { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+        .occupancy-count strong { font-size: 1rem; }
+        .occupancy-count.doctor strong { color: var(--emerald); }
+        .occupancy-count.visitors strong { color: var(--blue); }
+        .doctor-avatar { display: grid; place-items: center; color: #3159b8; font-weight: 800; }
+        .doctor-profile small { display: block; color: var(--text-tertiary); font-size: .68rem; }
+        .doctor-profile strong { display: block; font-size: .82rem; margin-top: 2px; }
+
+        @media (max-width: 720px) {
+            body { padding: 0 16px 24px; }
+            header { margin: 0 -16px 18px; padding: 14px 16px; }
+            .clinic-picker { padding: 14px; overflow-y: auto; }
+            .clinic-picker-card { display: block; min-height: auto; border-radius: 20px; }
+            .picker-visual { min-height: 310px; padding: 24px; }
+            .picker-workspace { padding: 26px 22px 24px; }
+            .clinic-list { grid-template-columns: 1fr; }
+            .doctor-directory-list { grid-template-columns: repeat(2, 1fr); }
+            .password-dialog, .clinic-context { align-items: stretch; flex-direction: column; }
+            .context-actions { justify-content: space-between; }
+            .camera-toolbar { align-items: flex-start; flex-direction: column; }
+            .camera-form-grid { grid-template-columns: 1fr; }
+            .camera-form-grid .wide { grid-column: auto; }
+        }
+
+        @media (max-width: 1080px) {
+            .workspace-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <section class="clinic-picker" id="clinicPicker">
+        <div class="clinic-picker-card">
+            <div class="picker-visual">
+                <div class="visual-brand"><span class="visual-brand-mark">+</span> Vishnu Portable Clinic</div>
+                <div class="visual-copy">
+                    <div class="eyebrow">College Health Services</div>
+                    <h2>Care that stays in view.</h2>
+                    <p>One calm workspace for clinic attendance, visitor flow, and the people who keep your campus healthy.</p>
+                </div>
+                <div class="visual-footer">
+                    <div class="visual-stat"><strong>24/7</strong><span>Clinic visibility</span></div>
+                    <div class="visual-stat"><strong>Live</strong><span>Visitor activity</span></div>
+                    <div class="visual-stat"><strong>Secure</strong><span>Private access</span></div>
+                </div>
+            </div>
+            <div class="picker-workspace">
+                <div class="clinic-picker-heading">
+                    <div class="eyebrow">Select your workspace</div>
+                    <h2>Choose a clinic to continue</h2>
+                    <p>Open a clinic to view its live attendance, occupancy, and visitor records.</p>
+                </div>
+                <div class="clinic-list">
+                    <button class="clinic-option selected" data-clinic="VSR Boys Hostel" data-password="vishnu">
+                        <strong>VSR Boys Hostel</strong><span>Student health desk · Ground floor</span><small>Open clinic →</small>
+                    </button>
+                    <button class="clinic-option" data-clinic="VSR Girls Hostel" data-password="vishnu">
+                        <strong>VSR Girls Hostel</strong><span>Student health desk · Main block</span><small>Open clinic →</small>
+                    </button>
+                    <button class="clinic-option" data-clinic="College Main Block" data-password="vishnu">
+                        <strong>College Main Block</strong><span>General consultation · Reception</span><small>Open clinic →</small>
+                    </button>
+                </div>
+                <div class="doctor-directory">
+                    <div class="doctor-directory-heading">
+                        <strong>Registered doctors</strong>
+                        <span>Reference photos for verification</span>
+                    </div>
+                    <div class="doctor-directory-list">
+                        <button class="doctor-directory-card" data-name="Dr. Bharat" data-clinic="VSR Boys Hostel" data-role="Registered Clinic Doctor" data-score="0.38 minimum match threshold" data-photo="/api/doctor/photo?name=bharat&v=meeee-20261008">
+                            <img src="/api/doctor/photo?name=bharat&v=meeee-20261008" alt="Dr. Bharat">
+                            <div><strong>Dr. Bharat</strong><span>VSR Boys Hostel</span></div>
+                        </button>
+                        <button class="doctor-directory-card" data-name="Dr. Kanth" data-clinic="College Main Block" data-role="Registered Clinic Doctor" data-score="0.38 minimum match threshold" data-photo="/api/doctor/photo?name=kanth&v=registered">
+                            <img src="/api/doctor/photo?name=kanth&v=registered" alt="Dr. Kanth">
+                            <div><strong>Dr. Kanth</strong><span>College Main Block</span></div>
+                        </button>
+                        <button class="doctor-directory-card" data-name="Dr. Praneeth" data-clinic="VSR Girls Hostel" data-role="Registered Clinic Doctor" data-score="0.38 minimum match threshold" data-photo="/api/doctor/photo?name=praneeth&v=registered">
+                            <img src="/api/doctor/photo?name=praneeth&v=registered" alt="Dr. Praneeth">
+                            <div><strong>Dr. Praneeth</strong><span>VSR Girls Hostel</span></div>
+                        </button>
+                        <button class="doctor-directory-card" data-name="Dr. Baji" data-clinic="Clinic Support" data-role="Registered Clinic Doctor" data-score="0.38 minimum match threshold" data-photo="/api/doctor/photo?name=baji&v=registered">
+                            <img src="/api/doctor/photo?name=baji&v=registered" alt="Dr. Baji">
+                            <div><strong>Dr. Baji</strong><span>Clinic Support</span></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="password-dialog open" id="passwordDialog">
+                    <div class="form-row">
+                        <label for="clinicPassword">Password for <strong id="selectedClinicLabel">VSR Boys Hostel</strong></label>
+                        <input id="clinicPassword" class="text-input" type="password" placeholder="Enter clinic password" autocomplete="off">
+                        <div class="password-error" id="passwordError"></div>
+                    </div>
+                    <button class="btn btn-accent" id="openClinicBtn">Enter dashboard</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Top Header -->
+    <header>
+        <div class="brand-group">
+            <div class="brand-logo">🏥</div>
+            <div class="brand-text">
+                <h1>Portable Clinic — AI Vision Monitor</h1>
+                <p>Real-Time Doctor Attendance, Room Occupancy & Safety Auditing</p>
+            </div>
+        </div>
+
+        <div class="header-status-group">
+            <div id="headerDocBadge" class="hud-badge offline">
+                <span class="pulse-dot"></span>
+                <span id="headerDocText">Dr. Bharat: ABSENT</span>
+            </div>
+            <div id="headerCamBadge" class="hud-badge">
+                <span>Stream: <strong id="headerCamText">Webcam (0)</strong></span>
+            </div>
+            <div class="hud-badge">
+                <span>GPU: <strong id="headerGpuText" style="color: var(--cyan);">Detecting...</strong></span>
+            </div>
+            <div class="clock-badge" id="headerClock">00:00:00</div>
+        </div>
+    </header>
+
+    <div class="clinic-context">
+        <div>
+            <div class="eyebrow">Live clinic dashboard</div>
+            <h2 id="clinicNameHeading">VSR Boys Hostel Clinic</h2>
+            <p>Attendance and visitor activity for today · <span id="clinicDateLabel">Loading date</span></p>
+        </div>
+        <div class="context-actions">
+            <div class="doctor-profile" id="doctorProfile" role="button" tabindex="0" aria-label="Open registered doctor photo">
+                <div class="doctor-avatar" id="doctorAvatar">DR</div>
+                <img id="doctorPhoto" alt="Registered doctor" style="display:none;">
+                <div><small>Registered doctor</small><strong id="doctorProfileName">Dr. Bharat</strong></div>
+            </div>
+            <button class="btn btn-subtle" id="switchClinicBtn">Switch clinic</button>
+        </div>
+    </div>
+
+    <div class="photo-modal" id="doctorPhotoModal" role="dialog" aria-modal="true" aria-label="Registered doctor photo">
+        <div class="photo-modal-content">
+            <button class="photo-modal-close" id="closeDoctorPhoto" aria-label="Close photo">&times;</button>
+            <img id="doctorPhotoLarge" alt="Registered doctor photo">
+        </div>
+    </div>
+
+    <div class="photo-modal doctor-detail-modal" id="doctorDetailModal" role="dialog" aria-modal="true" aria-label="Doctor details">
+        <div class="photo-modal-content doctor-detail-content">
+            <button class="photo-modal-close" id="closeDoctorDetail" aria-label="Close doctor details">&times;</button>
+            <div class="doctor-detail-head">
+                <img id="detailDoctorPhoto" alt="Doctor reference photo">
+                <div><h3 id="detailDoctorName">Dr. Bharat</h3><p id="detailDoctorRole">Registered Clinic Doctor</p></div>
+            </div>
+            <div class="doctor-detail-grid">
+                <div class="doctor-detail-item"><span>Assigned clinic</span><strong id="detailDoctorClinic">VSR Boys Hostel</strong></div>
+                <div class="doctor-detail-item"><span>Registration</span><strong>Verified</strong></div>
+                <div class="doctor-detail-item"><span>Recognition threshold</span><strong id="detailDoctorScore">0.38 minimum match threshold</strong></div>
+                <div class="doctor-detail-item"><span>Profile status</span><strong>Active</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 4 Key Metric Cards -->
+    <div class="kpi-grid">
+        <!-- Doctor Shift Status -->
+        <div class="kpi-card" id="cardDocShift">
+            <div class="kpi-top">
+                <span class="kpi-title">Current Doctor Shift</span>
+                <span class="shift-live-indicator">SHIFT</span>
+            </div>
+            <div class="kpi-main-row">
+                <span class="kpi-val" id="kpiDocName">Dr. Bharat</span>
+                <span id="kpiDocStatusPill" class="kpi-pill-tag tag-absent">ABSENT</span>
+            </div>
+            <div class="kpi-meta-footer">
+                <span>Current presence duration:</span>
+                <strong id="kpiDocShiftTimer" class="shift-duration-value">0s</strong>
+            </div>
+        </div>
+
+        <!-- Room Occupancy -->
+        <div class="kpi-card">
+            <div class="kpi-top">
+                <span class="kpi-title">Clinic Occupancy</span>
+                <span class="kpi-icon">👥</span>
+            </div>
+            <div class="kpi-main-row">
+                <span class="kpi-val"><span id="kpiTotalOccupancy">0</span> <small style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 500;">inside</small></span>
+                <span class="kpi-pill-tag" style="background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3);">ACTIVE ROOM</span>
+            </div>
+            <div class="kpi-meta-footer occupancy-counts">
+                <span class="occupancy-count doctor">Doctor <strong id="kpiDocCount">0</strong></span>
+                <span class="occupancy-count visitors">Visitors / Patients <strong id="kpiVisitorCount">0</strong></span>
+            </div>
+        </div>
+
+        <!-- Today's Total Hours -->
+        <div class="kpi-card">
+            <div class="kpi-top">
+                <span class="kpi-title">Total Doctor Presence Today</span>
+                <span class="kpi-icon">⏱️</span>
+            </div>
+            <div class="kpi-main-row">
+                <span class="kpi-val" id="kpiTotalDocHours">0h 0m</span>
+            </div>
+            <div class="kpi-meta-footer">
+                <span>Presence intervals today: <strong id="kpiShiftCount">0</strong></span>
+                <span>Date: <strong id="kpiTodayDate">Today</strong></span>
+            </div>
+        </div>
+
+        <!-- Unattended Visits & Absence Alerts -->
+        <div class="kpi-card">
+            <div class="kpi-top">
+                <span class="kpi-title">Patients Without Doctor</span>
+                <span class="kpi-icon">⚠️</span>
+            </div>
+            <div class="kpi-main-row">
+                <span class="kpi-val" id="kpiUnattendedVisits" style="color: #fb7185;">0</span>
+                <span id="kpiSecurityPill" class="kpi-pill-tag tag-present">SECURE</span>
+            </div>
+            <div class="kpi-meta-footer">
+                <span>Patients inside now</span>
+                <span>Doctor Away: <strong id="kpiDoctorAwayTimer" style="font-family: 'JetBrains Mono'; color: #f43f5e;">0s</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace (Video + Live Event Feed) -->
+    <div class="workspace-layout">
+        <!-- Live Video Viewport -->
+        <div class="viewport-card">
+            <!-- Camera Switcher Topbar -->
+            <div class="viewport-topbar">
+                <div class="camera-toolbar">
+                    <div class="camera-source-summary">
+                        <span class="camera-status-dot" id="cameraStatusDot"></span>
+                        <div><strong id="activeCameraName">Camera 01</strong><span id="activeCameraLocation">VSR Boys Hostel Clinic</span></div>
+                    </div>
+                    <div class="context-actions">
+                        <button class="btn btn-subtle" id="btnRefreshFeed">Reconnect stream</button>
+                        <button class="btn btn-accent" id="btnManageCameras">Manage cameras</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-modal" id="cameraModal" role="dialog" aria-modal="true" aria-label="Camera manager">
+                <div class="camera-modal-card">
+                    <div class="camera-modal-head">
+                        <div><h3>Camera manager</h3><p>Connect a registered source or add a new RTSP / NVR camera.</p></div>
+                        <button class="camera-close" id="closeCameraModal" aria-label="Close camera manager">&times;</button>
+                    </div>
+                    <div class="camera-list" id="cameraList"><div style="color:var(--text-tertiary);font-size:.8rem;">Loading cameras...</div></div>
+                    <form class="camera-form" id="cameraForm">
+                        <div class="camera-form-grid">
+                            <div class="form-row"><label for="cameraNameInput">Camera name</label><input id="cameraNameInput" class="text-input" required placeholder="Camera 02"></div>
+                            <div class="form-row"><label for="cameraLocationInput">Location</label><input id="cameraLocationInput" class="text-input" required placeholder="Waiting area"></div>
+                            <div class="form-row wide"><label for="cameraUrlInput">RTSP / NVR video stream URL</label><input id="cameraUrlInput" class="text-input" required value="rtsp://username:password@192.168.1.100:554/stream"></div>
+                            <div class="form-row"><label for="cameraUsernameInput">Username</label><input id="cameraUsernameInput" class="text-input" placeholder="admin" value="admin"></div>
+                            <div class="form-row"><label for="cameraPasswordInput">Password</label><input id="cameraPasswordInput" class="text-input" type="password" placeholder="Camera password"></div>
+                        </div>
+                        <div class="alert-toast" id="cameraToast"></div>
+                        <div class="camera-form-actions"><button type="button" class="btn btn-subtle" id="cancelCameraForm">Clear</button><button type="submit" class="btn btn-accent">Register camera</button></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Video Display Stage -->
+            <div class="video-stage">
+                <canvas id="liveCanvas" class="video-canvas"></canvas>
+                <div class="stage-hud-overlay">
+                    <div class="hud-glass-chip">FPS: <span id="hudFpsVal">0.0</span></div>
+                    <div class="hud-glass-chip">Doctor: <span id="hudDocStatusText" style="color: #f43f5e;">ABSENT</span></div>
+                    <div class="hud-glass-chip">Occupancy: <span id="hudOccVal">0</span></div>
+                </div>
+            </div>
+
+            <!-- Video Footer Legend -->
+            <div class="viewport-footer">
+                <div class="legend-row">
+                    <div class="legend-tag">
+                        <div class="legend-color-box" style="background: #10b981;"></div>
+                        <span>Registered Doctor</span>
+                    </div>
+                    <div class="legend-tag">
+                        <div class="legend-color-box" style="background: #06b6d4;"></div>
+                        <span>Identified Staff / Patient</span>
+                    </div>
+                    <div class="legend-tag">
+                        <div class="legend-color-box" style="background: #f59e0b;"></div>
+                        <span>Visitor / Patient Session</span>
+                    </div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-tertiary); font-family: 'JetBrains Mono';">
+                    InsightFace Buffalo_L • SCRFD
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Chronological Activity Feed -->
+        <div class="timeline-card">
+            <div class="timeline-header">
+                <span style="font-weight: 700; font-size: 0.95rem;">📋 Real-Time Activity Log</span>
+                <button class="btn btn-subtle" id="btnExportCsv">📥 Export CSV</button>
+            </div>
+            <div class="timeline-scroll-area" id="eventTimelineList">
+                <div style="text-align: center; color: var(--text-tertiary); padding: 50px 0;">Connecting to clinic event timeline...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Detailed Ledgers & Configuration -->
+    <div class="bottom-card">
+        <div class="tab-nav">
+            <button class="tab-link active" data-pane="pane-doctor-shifts">👨‍⚕️ Doctor Attendance Shifts</button>
+            <button class="tab-link" data-pane="pane-visitor-logs">👥 Visitor & Patient Session Logs</button>
+            <button class="tab-link" data-pane="pane-system-settings">⚙️ Doctor Enrollment & Settings</button>
+        </div>
+
+        <!-- Tab 1: Doctor Attendance Shifts -->
+        <div class="tab-content-panel active" id="pane-doctor-shifts">
+            <table class="clinic-table">
+                <thead>
+                    <tr>
+                        <th>Shift ID</th>
+                        <th>Doctor Name</th>
+                        <th>Entry Timestamp</th>
+                        <th>Exit Timestamp</th>
+                        <th>Total Shift Duration</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="doctorShiftsTableBody">
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">Loading today's attendance shifts...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tab 2: Visitor & Patient Session Logs -->
+        <div class="tab-content-panel" id="pane-visitor-logs">
+            <table class="clinic-table">
+                <thead>
+                    <tr>
+                        <th>Session #</th>
+                        <th>Person ID</th>
+                        <th>Identified Name</th>
+                        <th>Entry Timestamp</th>
+                        <th>Exit Timestamp</th>
+                        <th>Dwell Duration</th>
+                        <th>Doctor Status During Visit</th>
+                    </tr>
+                </thead>
+                <tbody id="visitorLogsTableBody">
+                    <tr><td colspan="7" style="text-align: center; color: var(--text-tertiary);">Loading visitor sessions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tab 3: Settings & Configuration -->
+        <div class="tab-content-panel" id="pane-system-settings">
+            <div id="settingsToast" class="alert-toast"></div>
+            
+            <div class="settings-grid">
+                <!-- Grace Period Thresholds -->
+                <div class="settings-box">
+                    <h3>⏱️ Exit Absence Thresholds (Debounce)</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">
+                        Time a person must be missing from the camera before marking them as officially <strong>EXITED</strong>:
+                    </p>
+
+                    <div class="form-row">
+                        <label>Doctor Exit Threshold: <span class="slider-value-display" id="valDocGrace">10s</span></label>
+                        <div class="slider-group">
+                            <input type="range" class="slider-input" id="sliderDocGrace" min="3" max="60" value="10">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Visitor Exit Threshold: <span class="slider-value-display" id="valVisGrace">8s</span></label>
+                        <div class="slider-group">
+                            <input type="range" class="slider-input" id="sliderVisGrace" min="2" max="30" value="8">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-accent" id="btnSaveGrace">Save Thresholds</button>
+                </div>
+
+                <!-- Doctor Enrollment -->
+                <div class="settings-box">
+                    <h3>➕ Enroll Doctor / Staff Face</h3>
+                    <div class="form-row">
+                        <label>Full Name</label>
+                        <input type="text" id="inputEnrollName" class="text-input" placeholder="e.g. Dr. Bharat">
+                    </div>
+                    <div class="form-row">
+                        <label>Photograph</label>
+                        <input type="file" id="inputEnrollFile" class="text-input" accept="image/*">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="checkIsDoctor" style="accent-color: #10b981;" checked>
+                        <label for="checkIsDoctor" style="font-size: 0.8rem; cursor: pointer;">Register as Clinic Doctor</label>
+                    </div>
+                    <button class="btn btn-accent" id="btnEnrollSubmit">Enroll Face</button>
+                </div>
+
+                <!-- Registered Doctors Config & Database -->
+                <div class="settings-box">
+                    <h3>🩺 Designated Doctor Names</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">
+                        Comma-separated names that trigger the Doctor Attendance state machine:
+                    </p>
+                    <div class="form-row">
+                        <input type="text" id="inputDoctorNames" class="text-input" placeholder="e.g. bharat, doctor, puli">
+                    </div>
+                    <button class="btn btn-subtle" id="btnSaveDoctorNames">Update Doctor List</button>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 6px 0;">
+
+                    <h3>🔄 Re-index Faces</h3>
+                    <button class="btn btn-subtle" id="btnRescanFaces">Rescan known_faces Directory</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Client Script -->
+    <script>
+        const API_BASE = window.location.origin;
+        const WS_URL = (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/ws/stream';
+
+        const canvas = document.getElementById('liveCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let ws = null;
+        let loadedDoctorPhotoName = '';
+        let selectedClinic = { name: 'VSR Boys Hostel', password: 'vishnu' };
+
+        // Clinic access gate. The live dashboard stays mounted so existing API behaviour is unchanged.
+        document.querySelectorAll('.clinic-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.clinic-option').forEach(item => item.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedClinic = { name: option.dataset.clinic, password: option.dataset.password };
+                document.getElementById('selectedClinicLabel').textContent = selectedClinic.name;
+                document.getElementById('clinicPassword').value = '';
+                document.getElementById('passwordError').textContent = '';
+                document.getElementById('clinicPassword').focus();
+            });
+        });
+
+        function enterSelectedClinic() {
+            const password = document.getElementById('clinicPassword').value;
+            if (password !== selectedClinic.password) {
+                document.getElementById('passwordError').textContent = 'That password does not match this clinic.';
+                return;
+            }
+            document.getElementById('clinicNameHeading').textContent = selectedClinic.name + ' Clinic';
+            document.getElementById('clinicPicker').classList.add('hidden');
+            document.getElementById('clinicDateLabel').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        }
+
+        document.getElementById('openClinicBtn').addEventListener('click', enterSelectedClinic);
+        document.getElementById('clinicPassword').addEventListener('keydown', event => {
+            if (event.key === 'Enter') enterSelectedClinic();
+        });
+        document.getElementById('switchClinicBtn').addEventListener('click', () => {
+            document.getElementById('clinicPicker').classList.remove('hidden');
+        });
+
+        function updateDoctorPhoto(name) {
+            const normalizedName = (name || 'bharat').toLowerCase().replace(/^dr\.\s*/, '').trim();
+            document.getElementById('doctorProfileName').textContent = 'Dr. ' + (normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1));
+            document.getElementById('doctorAvatar').textContent = normalizedName.slice(0, 2).toUpperCase();
+            if (normalizedName === loadedDoctorPhotoName) return;
+            loadedDoctorPhotoName = normalizedName;
+            const image = document.getElementById('doctorPhoto');
+            image.onload = () => { image.style.display = 'block'; document.getElementById('doctorAvatar').style.display = 'none'; };
+            image.onerror = () => { image.style.display = 'none'; document.getElementById('doctorAvatar').style.display = 'grid'; };
+            image.src = API_BASE + '/api/doctor/photo?name=' + encodeURIComponent(normalizedName) + '&v=meeee-20261008';
+        }
+
+        function openDoctorPhoto() {
+            const image = document.getElementById('doctorPhoto');
+            if (image.style.display === 'none' || !image.src) return;
+            document.getElementById('doctorPhotoLarge').src = image.src;
+            document.getElementById('doctorPhotoModal').classList.add('open');
+        }
+
+        function closeDoctorPhoto() {
+            document.getElementById('doctorPhotoModal').classList.remove('open');
+        }
+
+        document.getElementById('doctorProfile').addEventListener('click', openDoctorPhoto);
+        document.getElementById('doctorProfile').addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') openDoctorPhoto();
+        });
+        document.getElementById('closeDoctorPhoto').addEventListener('click', closeDoctorPhoto);
+        document.getElementById('doctorPhotoModal').addEventListener('click', event => {
+            if (event.target.id === 'doctorPhotoModal') closeDoctorPhoto();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeDoctorPhoto();
+        });
+
+        function openDoctorDetails(card) {
+            document.getElementById('detailDoctorPhoto').src = card.dataset.photo;
+            document.getElementById('detailDoctorName').textContent = card.dataset.name;
+            document.getElementById('detailDoctorRole').textContent = card.dataset.role;
+            document.getElementById('detailDoctorClinic').textContent = card.dataset.clinic;
+            document.getElementById('detailDoctorScore').textContent = card.dataset.score;
+            document.getElementById('doctorDetailModal').classList.add('open');
+        }
+
+        function closeDoctorDetails() {
+            document.getElementById('doctorDetailModal').classList.remove('open');
+        }
+
+        document.querySelectorAll('.doctor-directory-card').forEach(card => {
+            card.addEventListener('click', () => openDoctorDetails(card));
+        });
+        document.getElementById('closeDoctorDetail').addEventListener('click', closeDoctorDetails);
+        document.getElementById('doctorDetailModal').addEventListener('click', event => {
+            if (event.target.id === 'doctorDetailModal') closeDoctorDetails();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeDoctorDetails();
+        });
+
+        updateDoctorPhoto('bharat');
+
+        // Clock
+        function tickClock() {
+            const now = new Date();
+            document.getElementById('headerClock').textContent = now.toTimeString().split(' ')[0];
+        }
+        setInterval(tickClock, 1000);
+        tickClock();
+
+        // Tabs
+        document.querySelectorAll('.tab-link').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.pane).classList.add('active');
+                if (btn.dataset.pane === 'pane-doctor-shifts' || btn.dataset.pane === 'pane-visitor-logs') {
+                    fetchSessions();
+                }
+            });
+        });
+
+        // Camera manager
+        let activeCamera = null;
+        const cameraModal = document.getElementById('cameraModal');
+        const cameraList = document.getElementById('cameraList');
+
+        function setActiveCamera(camera, connected) {
+            activeCamera = camera;
+            document.getElementById('activeCameraName').textContent = camera.camera_name || 'Camera';
+            document.getElementById('activeCameraLocation').textContent = camera.location || camera.source_url;
+            document.getElementById('cameraStatusDot').classList.toggle('connected', connected);
+            document.getElementById('headerCamText').textContent = camera.camera_name || 'RTSP';
+        }
+
+        async function connectCamera(camera) {
+            const formData = new FormData();
+            formData.append('source', camera.source_url);
+            const response = await fetch(API_BASE + '/api/camera/connect', { method: 'POST', body: formData });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error('Camera connection failed');
+            setActiveCamera(camera, true);
+            cameraModal.classList.remove('open');
+        }
+
+        function renderCameraList(cameras) {
+            cameraList.replaceChildren();
+            const builtInCameras = [
+                { camera_name: 'Laptop Webcam (0)', location: 'This computer', source_url: '0', built_in: true },
+                { camera_name: 'External Webcam (1)', location: 'USB camera', source_url: '1', built_in: true },
+            ];
+            const allCameras = [...builtInCameras, ...cameras];
+            if (!allCameras.length) {
+                cameraList.textContent = 'No cameras registered yet.';
+                return;
+            }
+            allCameras.forEach(camera => {
+                const row = document.createElement('div');
+                row.className = 'camera-row';
+                const info = document.createElement('div');
+                const name = document.createElement('strong');
+                name.textContent = camera.camera_name;
+                const location = document.createElement('span');
+                location.textContent = `${camera.location} · ${camera.built_in ? 'Local webcam' : camera.source_url}`;
+                info.append(name, location);
+                const actions = document.createElement('div');
+                actions.className = 'camera-row-actions';
+                const connect = document.createElement('button');
+                connect.className = 'btn btn-accent';
+                connect.textContent = 'Connect';
+                connect.addEventListener('click', () => connectCamera(camera).catch(error => showToast('cameraToast', error.message, 'error')));
+                actions.append(connect);
+                row.append(info, actions);
+                cameraList.append(row);
+            });
+        }
+
+        async function loadCameras() {
+            const response = await fetch(API_BASE + '/api/cameras');
+            const data = await response.json();
+            renderCameraList(data.cameras || []);
+            const preferredCamera = data.cameras?.[0];
+            if (!activeCamera && preferredCamera) setActiveCamera(preferredCamera, false);
+        }
+
+        document.getElementById('btnManageCameras').addEventListener('click', () => {
+            cameraModal.classList.add('open');
+            loadCameras().catch(error => showToast('cameraToast', error.message, 'error'));
+        });
+        document.getElementById('closeCameraModal').addEventListener('click', () => cameraModal.classList.remove('open'));
+        document.getElementById('cameraModal').addEventListener('click', event => {
+            if (event.target.id === 'cameraModal') cameraModal.classList.remove('open');
+        });
+        document.getElementById('cancelCameraForm').addEventListener('click', () => document.getElementById('cameraForm').reset());
+        document.getElementById('cameraForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const formElement = event.currentTarget;
+            const submitButton = formElement.querySelector('button[type="submit"]');
+            const form = new FormData();
+            form.append('camera_name', document.getElementById('cameraNameInput').value.trim());
+            form.append('location', document.getElementById('cameraLocationInput').value.trim());
+            form.append('source_url', document.getElementById('cameraUrlInput').value.trim());
+            form.append('username', document.getElementById('cameraUsernameInput').value.trim());
+            form.append('password', document.getElementById('cameraPasswordInput').value);
+            submitButton.disabled = true;
+            submitButton.textContent = 'Registering...';
+            try {
+                const response = await fetch(API_BASE + '/api/cameras', { method: 'POST', body: form });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.detail || 'Camera registration failed');
+                renderCameraList(data.cameras || []);
+                showToast('cameraToast', 'Camera registered successfully.', 'success');
+                formElement.reset();
+                document.getElementById('cameraUrlInput').value = 'rtsp://username:password@192.168.1.100:554/stream';
+                document.getElementById('cameraUsernameInput').value = 'admin';
+                document.getElementById('cameraPasswordInput').value = '';
+            } catch (error) {
+                showToast('cameraToast', error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Register camera';
+            }
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') cameraModal.classList.remove('open');
+        });
+        loadCameras().catch(() => {});
+
+        // Threshold Sliders
+        const sDoc = document.getElementById('sliderDocGrace');
+        const sVis = document.getElementById('sliderVisGrace');
+        const vDoc = document.getElementById('valDocGrace');
+        const vVis = document.getElementById('valVisGrace');
+
+        sDoc.addEventListener('input', () => { vDoc.textContent = sDoc.value + 's'; });
+        sVis.addEventListener('input', () => { vVis.textContent = sVis.value + 's'; });
+
+        document.getElementById('btnSaveGrace').addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('doc_grace', sDoc.value);
+            formData.append('vis_grace', sVis.value);
+            const res = await fetch(API_BASE + '/api/settings/grace', { method: 'POST', body: formData });
+            showToast('settingsToast', 'Absence thresholds saved successfully!', 'success');
+        });
+
+        // WebSocket Streaming
+        function initWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log('[WebSocket] Live connected.');
+                document.getElementById('headerCamBadge').className = 'hud-badge online';
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    renderClinicStream(data);
+                } catch (err) {
+                    console.error('Frame decode exception:', err);
+                }
+            };
+
+            ws.onerror = () => {
+                document.getElementById('headerCamBadge').className = 'hud-badge offline';
+            };
+
+            ws.onclose = () => {
+                document.getElementById('headerCamBadge').className = 'hud-badge';
+                setTimeout(initWebSocket, 2000);
+            };
+        }
+
+        // Render Frame & Metrics
+        function renderClinicStream(data) {
+            const { frame, fps, gpu_in_use, tracked_items, clinic_status } = data;
+
+            document.getElementById('hudFpsVal').textContent = fps ? fps.toFixed(1) : '0.0';
+            document.getElementById('headerGpuText').textContent = gpu_in_use ? 'CUDA / DirectML' : 'CPU';
+
+            if (!clinic_status || !clinic_status.doctor) return;
+
+            const doc = clinic_status.doctor;
+            const clinic = clinic_status.clinic;
+            const summary = clinic_status.summary_today;
+
+            // Doctor Status HUD
+            const isDocPresent = doc.present;
+            const docNameFormatted = doc.name ? 'Dr. ' + doc.name.charAt(0).toUpperCase() + doc.name.slice(1) : 'Doctor';
+            updateDoctorPhoto(doc.name || 'bharat');
+            document.getElementById('cardDocShift').classList.toggle('shift-active', isDocPresent);
+
+            document.getElementById('kpiDocName').textContent = docNameFormatted;
+            const docBadge = document.getElementById('kpiDocStatusPill');
+            const headerDocBadge = document.getElementById('headerDocBadge');
+            const hudDocText = document.getElementById('hudDocStatusText');
+
+            if (isDocPresent) {
+                docBadge.className = 'kpi-pill-tag tag-present';
+                docBadge.textContent = 'PRESENT';
+                headerDocBadge.className = 'hud-badge online';
+                document.getElementById('headerDocText').textContent = `${docNameFormatted}: IN CLINIC`;
+                hudDocText.textContent = 'PRESENT';
+                hudDocText.style.color = '#10b981';
+            } else {
+                docBadge.className = 'kpi-pill-tag tag-absent';
+                docBadge.textContent = 'ABSENT';
+                headerDocBadge.className = 'hud-badge offline';
+                document.getElementById('headerDocText').textContent = `${docNameFormatted}: ABSENT`;
+                hudDocText.textContent = 'ABSENT';
+                hudDocText.style.color = '#f43f5e';
+            }
+
+            document.getElementById('kpiDocShiftTimer').textContent = doc.current_duration_formatted || '0s';
+            document.getElementById('kpiDoctorAwayTimer').textContent = doc.absence_duration_formatted || '0s';
+
+            // Occupancy
+            document.getElementById('kpiTotalOccupancy').textContent = clinic.occupancy;
+            document.getElementById('hudOccVal').textContent = clinic.occupancy;
+            document.getElementById('kpiDocCount').textContent = isDocPresent ? 1 : 0;
+            document.getElementById('kpiVisitorCount').textContent = clinic.active_visitors_count;
+
+            // Summary
+            document.getElementById('kpiTotalDocHours').textContent = summary.total_doctor_time_formatted;
+            document.getElementById('kpiShiftCount').textContent = summary.doctor_sessions_count;
+            document.getElementById('kpiTodayDate').textContent = summary.date;
+
+            // Unattended
+            const unattendedCount = clinic.unattended_active_count || 0;
+            document.getElementById('kpiUnattendedVisits').textContent = unattendedCount;
+
+            const secPill = document.getElementById('kpiSecurityPill');
+            if (unattendedCount > 0) {
+                secPill.className = 'kpi-pill-tag tag-absent';
+                secPill.textContent = `${unattendedCount} UNATTENDED`;
+            } else {
+                secPill.className = 'kpi-pill-tag tag-present';
+                secPill.textContent = 'SECURE';
+            }
+
+            // Draw Video
+            if (frame) {
+                const img = new Image();
+                img.onload = () => {
+                    if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                    }
+                    ctx.drawImage(img, 0, 0);
+                    drawBoundingBoxes(tracked_items, doc.registered_doctors || []);
+                };
+                img.src = 'data:image/jpeg;base64,' + frame;
+            }
+
+            // Timeline
+            if (clinic_status.recent_events) {
+                renderTimelineEvents(clinic_status.recent_events);
+            }
+        }
+
+        // Draw Bounding Boxes
+        function drawBoundingBoxes(items, docNames) {
+            if (!items || items.length === 0) return;
+
+            for (const item of items) {
+                const [x1, y1, x2, y2] = item.box;
+                const w = x2 - x1;
+                const h = y2 - y1;
+
+                const nameLower = (item.name || '').toLowerCase();
+                const isDoc = docNames.map(d => d.toLowerCase()).includes(nameLower);
+
+                let color = '#f59e0b';
+                let label = `Visitor (${item.person_id})`;
+
+                if (isDoc) {
+                    color = '#10b981';
+                    label = `[DOCTOR] Dr. ${item.name.toUpperCase()}`;
+                } else if (item.name && item.name !== 'Unknown') {
+                    color = '#06b6d4';
+                    label = `${item.name} (${item.person_id})`;
+                }
+
+                // Box
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x1, y1, w, h);
+
+                // Label Background
+                ctx.fillStyle = 'rgba(6, 9, 19, 0.88)';
+                const labelW = Math.max(w, 160);
+                ctx.fillRect(x1, y1 - 28, labelW, 28);
+
+                // Label Text
+                ctx.fillStyle = color;
+                ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+                ctx.fillText(label, x1 + 8, y1 - 9);
+            }
+        }
+
+        // Render Activity Timeline
+        function renderTimelineEvents(events) {
+            const list = document.getElementById('eventTimelineList');
+            if (!events || events.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:var(--text-tertiary);padding:50px 0;">No events logged today yet.</div>';
+                return;
+            }
+
+            list.innerHTML = events.map(ev => {
+                let cardClass = '';
+                let badgeClass = 'badge-vis';
+
+                if (ev.event_type === 'DOCTOR_ENTRY') {
+                    cardClass = 'event-doc-in';
+                    badgeClass = 'badge-doc';
+                } else if (ev.event_type === 'DOCTOR_EXIT') {
+                    cardClass = 'event-doc-out';
+                    badgeClass = 'badge-alert';
+                } else if (ev.event_type === 'UNATTENDED_VISITOR') {
+                    cardClass = 'event-unattended';
+                    badgeClass = 'badge-alert';
+                }
+
+                const timeOnly = ev.timestamp ? ev.timestamp.split(' ')[1] : '';
+
+                return `
+                    <div class="event-card ${cardClass}">
+                        <div class="event-top-row">
+                            <span class="event-badge ${badgeClass}">${ev.event_type.replace('_', ' ')}</span>
+                            <span class="event-timestamp">${timeOnly}</span>
+                        </div>
+                        <div class="event-details-text">${ev.details || ev.person_name}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load Shift & Session Tables
+        async function fetchSessions() {
+            try {
+                const res = await fetch(API_BASE + '/api/clinic/sessions');
+                const data = await res.json();
+
+                // Doctor Shifts
+                const docTbody = document.getElementById('doctorShiftsTableBody');
+                if (!data.doctor_sessions || data.doctor_sessions.length === 0) {
+                    docTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);">No doctor shifts recorded today.</td></tr>';
+                } else {
+                    docTbody.innerHTML = data.doctor_sessions.map(s => {
+                        const dur = s.duration_sec ? formatSeconds(s.duration_sec) : 'In Progress (Active)';
+                        const statusPill = s.exit_time 
+                            ? '<span class="kpi-pill-tag tag-absent">COMPLETED</span>' 
+                            : '<span class="kpi-pill-tag tag-present">IN CLINIC (ACTIVE)</span>';
+
+                        return `
+                            <tr>
+                                <td><strong>#${s.id}</strong></td>
+                                <td><strong>Dr. ${s.doctor_name.toUpperCase()}</strong></td>
+                                <td><code>${s.entry_time}</code></td>
+                                <td><code>${s.exit_time || '<span style="color:#10b981;">Ongoing Shift</span>'}</code></td>
+                                <td><strong>${dur}</strong></td>
+                                <td>${statusPill}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // Visitor Sessions
+                const visTbody = document.getElementById('visitorLogsTableBody');
+                if (!data.visitor_sessions || data.visitor_sessions.length === 0) {
+                    visTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);">No visitor sessions recorded today.</td></tr>';
+                } else {
+                    visTbody.innerHTML = data.visitor_sessions.map(v => {
+                        const dur = v.duration_sec ? formatSeconds(v.duration_sec) : 'Inside Clinic';
+                        const unBadge = v.was_unattended 
+                            ? '<span class="kpi-pill-tag tag-absent">⚠️ YES (DOCTOR WAS ABSENT)</span>' 
+                            : '<span class="kpi-pill-tag tag-present">Doctor Present</span>';
+
+                        return `
+                            <tr>
+                                <td>#${v.id}</td>
+                                <td><code>${v.person_id}</code></td>
+                                <td><strong>${v.person_name}</strong></td>
+                                <td><code>${v.entry_time}</code></td>
+                                <td><code>${v.exit_time || '<span style="color:#06b6d4;">Active Inside</span>'}</code></td>
+                                <td>${dur}</td>
+                                <td>${unBadge}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                console.error('Error loading sessions:', err);
+            }
+        }
+
+        // Helpers
+        function formatSeconds(secs) {
+            const s = Math.round(secs);
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const remS = s % 60;
+            if (h > 0) return `${h}h ${m}m ${remS}s`;
+            if (m > 0) return `${m}m ${remS}s`;
+            return `${remS}s`;
+        }
+
+        function showToast(id, msg, type) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.className = `alert-toast show ${type}`;
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        // Enroll Handler
+        document.getElementById('btnEnrollSubmit').addEventListener('click', async () => {
+            const name = document.getElementById('inputEnrollName').value.trim();
+            const fileInput = document.getElementById('inputEnrollFile');
+            const isDoctor = document.getElementById('checkIsDoctor').checked;
+
+            if (!name || !fileInput.files.length) {
+                showToast('settingsToast', 'Please enter a name and select a photo.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnEnrollSubmit');
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('image', fileInput.files[0]);
+                formData.append('is_doctor', isDoctor);
+
+                const res = await fetch(API_BASE + '/api/enroll', { method: 'POST', body: formData });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.detail || 'Enrollment failed');
+
+                showToast('settingsToast', `Enrolled ${name} successfully! (Total faces: ${json.enrolled_count})`, 'success');
+                document.getElementById('inputEnrollName').value = '';
+                fileInput.value = '';
+            } catch (e) {
+                showToast('settingsToast', e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // Doctor Names Config
+        document.getElementById('btnSaveDoctorNames').addEventListener('click', async () => {
+            const names = document.getElementById('inputDoctorNames').value.trim();
+            if (!names) return;
+            const formData = new FormData();
+            formData.append('names', names);
+            const res = await fetch(API_BASE + '/api/doctor/set', { method: 'POST', body: formData });
+            const json = await res.json();
+            showToast('settingsToast', 'Updated doctor list: ' + json.registered_doctors.join(', '), 'success');
+        });
+
+        // Rescan
+        document.getElementById('btnRescanFaces').addEventListener('click', async () => {
+            const res = await fetch(API_BASE + '/api/rescan', { method: 'POST' });
+            const json = await res.json();
+            showToast('settingsToast', `Face database rebuilt! Total enrolled: ${json.enrolled_count}`, 'success');
+        });
+
+        // CSV Export
+        document.getElementById('btnExportCsv').addEventListener('click', () => {
+            window.location.href = API_BASE + '/api/export/csv';
+        });
+
+        // Reconnect Feed
+        document.getElementById('btnRefreshFeed').addEventListener('click', async () => {
+            if (activeCamera) {
+                await connectCamera(activeCamera);
+            } else {
+                await fetch(API_BASE + '/api/camera/connect', { method: 'POST' });
+            }
+        });
+
+        // Start WebSocket
+        initWebSocket();
+        fetchSessions();
+    </script>
+</body>
+</html>
