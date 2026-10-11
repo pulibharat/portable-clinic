@@ -65,7 +65,7 @@ class CameraManager:
     """Handles camera connection lifecycle for webcam and RTSP camera feeds."""
 
     def __init__(self, source: str | None = None):
-        self.source = str(source) if source is not None else VIDEO_SOURCE
+        self.source = str(source) if source is not None else os.getenv("VIDEO_SOURCE", VIDEO_SOURCE)
         self.cap: cv2.VideoCapture | None = None
         self.grabber: StreamGrabber | None = None
         self.is_rtsp = False

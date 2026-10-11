@@ -57,7 +57,6 @@ static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-
     def normalize_camera_source(source: str) -> str:
         """Convert a CP Plus web root URL into its RTSP video stream URL."""
         source = source.strip()
@@ -504,7 +503,8 @@ async def register_camera(
                 parsed.fragment,
             ))
     if not camera_name.strip() or not location.strip() or not source_url:
-        raise HTTPException(status_code=400, detail="Camera name, location, and RTSP URL are required")
+        raise HTTPException(
+            status_code=400, detail="Camera name, location, and RTSP URL are required")
     camera_id = db.add_camera_source(camera_name, location, source_url)
     return {"success": True, "camera_id": camera_id, "cameras": db.get_camera_sources()}
 

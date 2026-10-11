@@ -226,7 +226,8 @@ class ClinicDatabase:
                     duration = None if merged_exit is None else max(
                         0, merged_exit - master["entry_unix"])
                     merged_exit_time = (
-                        datetime.fromtimestamp(merged_exit).strftime("%Y-%m-%d %H:%M:%S")
+                        datetime.fromtimestamp(merged_exit).strftime(
+                            "%Y-%m-%d %H:%M:%S")
                         if merged_exit is not None else None
                     )
                     cur.execute(f"""
@@ -392,7 +393,8 @@ class ClinicDatabase:
     def deactivate_camera_source(self, camera_id: int) -> None:
         with self._lock:
             conn = self._get_connection()
-            conn.execute("UPDATE camera_sources SET is_active = 0 WHERE id = ?", (camera_id,))
+            conn.execute(
+                "UPDATE camera_sources SET is_active = 0 WHERE id = ?", (camera_id,))
             conn.commit()
             conn.close()
 
