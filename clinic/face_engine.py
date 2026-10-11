@@ -5,7 +5,7 @@ Wraps InsightFace (SCRFD detection + ArcFace recognition).
 
 import cv2
 import numpy as np
-from .config import DET_SIZE, DET_THRESH, FORCE_CPU, _DET_SIZE_EXPLICIT, INFER_MAX_WIDTH, MIN_FACE_PX
+from .config import DET_SIZE, DET_THRESH, FACE_MODEL, FORCE_CPU, _DET_SIZE_EXPLICIT, INFER_MAX_WIDTH, MIN_FACE_PX
 
 
 def get_onnx_providers() -> list[str]:
@@ -43,7 +43,7 @@ class FaceEngine:
 
         print(f"[FaceEngine] Provider: {self.provider} (GPU: {self.gpu_in_use})")
         self.app = FaceAnalysis(
-            name="buffalo_l",
+            name=FACE_MODEL,
             allowed_modules=["detection", "recognition"],
             providers=self.providers,
         )
@@ -62,7 +62,7 @@ class FaceEngine:
         self.provider = "CPUExecutionProvider"
         self.gpu_in_use = False
         self.app = FaceAnalysis(
-            name="buffalo_l",
+            name=FACE_MODEL,
             allowed_modules=["detection", "recognition"],
             providers=self.providers,
         )
