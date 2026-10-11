@@ -17,6 +17,7 @@ EMBEDDINGS_DIR = Path(os.getenv("EMBEDDINGS_DIR", str(DATA_DIR / "embeddings")))
 EMBEDDINGS_FILE = Path(os.getenv("EMBEDDINGS_FILE", str(EMBEDDINGS_DIR / "face_embeddings.npy")))
 NAMES_FILE = Path(os.getenv("NAMES_FILE", str(EMBEDDINGS_DIR / "face_names.json")))
 DATABASE_FILE = Path(os.getenv("DATABASE_FILE", str(DATA_DIR / "clinic.db")))
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 # Ensure necessary directories exist
 DATA_DIR.mkdir(parents=True, exist_ok=True)
