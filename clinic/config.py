@@ -73,6 +73,7 @@ DET_SIZE = (DET_WIDTH, DET_HEIGHT)
 _DET_SIZE_EXPLICIT = "DET_WIDTH" in os.environ or "DET_HEIGHT" in os.environ
 DET_THRESH = float(os.getenv("DET_THRESH", "0.35"))
 MIN_FACE_PX = int(os.getenv("MIN_FACE_PX", "40"))
+FORCE_CPU = os.getenv("FORCE_CPU", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 # ---------------------------------------------------------------------------
 # Matching & Thresholds

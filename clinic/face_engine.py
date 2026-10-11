@@ -5,11 +5,14 @@ Wraps InsightFace (SCRFD detection + ArcFace recognition).
 
 import cv2
 import numpy as np
-from .config import DET_SIZE, DET_THRESH, _DET_SIZE_EXPLICIT, INFER_MAX_WIDTH, MIN_FACE_PX
+from .config import DET_SIZE, DET_THRESH, FORCE_CPU, _DET_SIZE_EXPLICIT, INFER_MAX_WIDTH, MIN_FACE_PX
 
 
 def get_onnx_providers() -> list[str]:
     """Detect available ONNX Runtime execution providers (GPU / DirectML / CPU)."""
+    if FORCE_CPU:
+        return ["CPUExecutionProvider"]
+
     try:
         import onnxruntime as ort
         available = ort.get_available_providers()
@@ -46,6 +49,28 @@ class FaceEngine:
         )
         ctx_id = 0 if self.gpu_in_use else -1
         self.app.prepare(ctx_id=ctx_id, det_thresh=DET_THRESH, det_size=det_size)
+
+    def switch_to_cpu(self) -> None:
+        """Replace an unstable GPU provider with the CPU runtime once."""
+        if not self.gpu_in_use:
+            return
+
+        from insightface.app import FaceAnalysis
+
+        print("[FaceEngine] GPU inference failed; switching to CPU fallback.")
+        self.providers = ["CPUExecutionProvider"]
+        self.provider = "CPUExecutionProvider"
+        self.gpu_in_use = False
+        self.app = FaceAnalysis(
+            name="buffalo_l",
+            allowed_modules=["detection", "recognition"],
+            providers=self.providers,
+        )
+        self.app.prepare(
+            ctx_id=-1,
+            det_thresh=DET_THRESH,
+            det_size=(384, 384),
+        )
 
     def embed_image(self, img: np.ndarray) -> np.ndarray | None:
         """Extract normalized embedding from the largest face in the image."""

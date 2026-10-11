@@ -195,6 +195,11 @@ def inference_loop():
 
         except Exception as e:
             print(f"[Inference Error] {e}")
+            if face_engine and face_engine.gpu_in_use:
+                try:
+                    face_engine.switch_to_cpu()
+                except Exception as fallback_error:
+                    print(f"[FaceEngine] CPU fallback failed: {fallback_error}")
             time.sleep(0.02)
 
         time.sleep(0.005)
