@@ -5,10 +5,12 @@ Loads settings from environment variables with robust defaults.
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Base Paths
 PACKAGE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = PACKAGE_DIR.parent
+load_dotenv(PROJECT_DIR / ".env")
 DATA_DIR = Path(os.getenv("DATA_DIR", str(PROJECT_DIR / "data")))
 
 # Sub-directories
